@@ -18,18 +18,17 @@ let page = 1;
 let currentQuery = '';
 let totalHits = 0;
 
+const PER_PAGE = 15;
+
 form.addEventListener('submit', async event => {
   event.preventDefault();
 
   const input = form.querySelector('input');
   currentQuery = input.value.trim();
 
-  if (!currentQuery) {
-    return;
-  }
+  if (!currentQuery) return;
 
   page = 1;
-
   clearGallery();
   hideLoadMoreButton();
   showLoader();
@@ -39,18 +38,24 @@ form.addEventListener('submit', async event => {
 
     totalHits = data.totalHits;
 
-    if (data.hits.length === 0) {
+    if (!data.hits.length) {
       iziToast.error({
         message:
           'Sorry, there are no images matching your search query. Please try again!',
       });
-
       return;
     }
 
     createGallery(data.hits);
 
-    if (totalHits > 15) {
+    const totalPages = Math.ceil(totalHits / PER_PAGE);
+
+    if (page >= totalPages) {
+      iziToast.info({
+        message: "We're sorry, but you've reached the end of search results.",
+      });
+      hideLoadMoreButton();
+    } else {
       showLoadMoreButton();
     }
   } catch (error) {
@@ -66,22 +71,24 @@ form.addEventListener('submit', async event => {
 
 loadMoreBtn.addEventListener('click', async () => {
   page += 1;
-  hideLoadMoreButton(); 
+
+  hideLoadMoreButton();
   showLoader();
 
   try {
     const data = await getImagesByQuery(currentQuery, page);
+
     createGallery(data.hits);
 
-    const totalPages = Math.ceil(totalHits / 15);
+    const totalPages = Math.ceil(totalHits / PER_PAGE);
 
     if (page >= totalPages) {
-      hideLoadMoreButton();
       iziToast.info({
         message: "We're sorry, but you've reached the end of search results.",
       });
+      hideLoadMoreButton();
     } else {
-      showLoadMoreButton(); 
+      showLoadMoreButton();
     }
 
     const galleryItem = document.querySelector('.gallery-item');
@@ -93,7 +100,9 @@ loadMoreBtn.addEventListener('click', async () => {
       });
     }
   } catch (error) {
-    iziToast.error({ message: 'Something went wrong!' });
+    iziToast.error({
+      message: 'Something went wrong!',
+    });
   } finally {
     hideLoader();
   }
